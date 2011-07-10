@@ -254,9 +254,10 @@ contains
   !                                                                 |
   !-----------------------------------------------------------------|
 
-    use modsurfdata,only : wtsurf,wqsurf,ustin,thls,isurf,ps
+    use modsurfdata,only : wtsurf,wqsurf,ustin,thls,isurf,ps,lhetero
     use modglobal, only : imax,jtot, ysize,xsize,dtmax,runtime, startfile,lwarmstart
     use modmpi,    only : myid, nprocs,mpierr
+    use modtimedep, only : ltimedep
 
 
       if(mod(jtot,nprocs) /= 0) then
@@ -308,6 +309,11 @@ contains
       end if
     end if
 
+    if (ltimedep .and. lhetero) then
+      if (myid == 0) write(6,*) 'WARNING: You selected to use time dependent (ltimedep) and heterogeneous surface conditions (lhetero) at the same time' 
+      if (myid == 0) write(0,*) 'WARNING: You selected to use time dependent (ltimedep) and heterogeneous surface conditions (lhetero) at the same time' 
+    endif
+
   end subroutine checkinitvalues
 
   subroutine readinitfiles
@@ -323,7 +329,8 @@ contains
                                   rslabs,cu,cv,e12min,dzh,dtheta,dqt,dsv,cexpnr,ifinput,lwarmstart,itrestart,trestart, ladaptive,llsadv,tnextrestart
     use modsubgrid,        only : ekm,ekh
     use modsurfdata,       only : wtsurf,wqsurf,wsvsurf, &
-                                  thls,tskin,tskinm,tsoil,tsoilm,phiw,phiwm,Wl,Wlm,thvs,ustin,ps,qts,isurf,svs,obl,oblav
+                                  thls,tskin,tskinm,tsoil,tsoilm,phiw,phiwm,Wl,Wlm,thvs,ustin,ps,qts,isurf,svs,obl,oblav,&
+                                  thvs_patch,lhetero 
     use modsurface,        only : surface,qtsurf,dthldz
     use modboundary,       only : boundary,tqaver
     use modmpi,            only : slabsum,myid,comm3d,mpierr,my_real
@@ -497,6 +504,7 @@ contains
       
       dthldz = (thlprof(1) - thls)/zf(1)
       thvs = thls * (1. + (rv/rd - 1.) * qts)
+      if(lhetero) thvs_patch = thvs  !Needed for initialization: thls_patch and qt_patch not yet calculated
 
       u0av(1)   = uprof(1)
       thl0av(1) = thlprof(1)
