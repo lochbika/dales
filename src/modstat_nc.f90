@@ -91,7 +91,7 @@ contains
     if (.not.exans) then
 
       call date_and_time(date,time)
-      iret = nf90_create(fname,NF90_SHARE,ncid)
+      iret = nf90_create(fname,NF90_NETCDF4,ncid)
       iret = nf90_put_att(ncid,NF90_GLOBAL,'title',fname)
       iret = nf90_put_att(ncid,NF90_GLOBAL,'history','Created on '//trim(date)//' at '//trim(time))
       iret = nf90_put_att(ncid, NF90_GLOBAL, 'Source',trim(version))
@@ -293,6 +293,7 @@ contains
 
         call nchandle_error(iret)
       end if
+      iret=nf90_def_var_deflate(ncid,varID, 0, 1, deflate_level = 6)
       iret=nf90_put_att(ncID,VarID,'longname',sx(n,2))
       iret=nf90_put_att(ncID,VarID,'units',sx(n,3))
       iret = nf90_put_att(ncid, VarID, '_FillValue',nc_fillvalue)
