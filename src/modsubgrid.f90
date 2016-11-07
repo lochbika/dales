@@ -62,7 +62,7 @@ contains
     cm = cf / (2. * pi) * (1.5*alpha_kolm)**(-1.5)
 
 !     ch   = 2. * alpha_kolm / beta_kolm
-    ch   = 1.0/Prandtl
+    ch   = cm
     ch2  = ch-ch1
 
     ceps = 2. * pi / cf * (1.5*alpha_kolm)**(-1.5)
