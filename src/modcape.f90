@@ -33,7 +33,7 @@ private
 PUBLIC :: initcape,docape,exitcape
 save
 !NetCDF variables
-  integer,parameter :: nvar = 4
+  integer,parameter :: nvar = 6
   integer :: ncid4 = 0
   integer :: nrec = 0
   character(80) :: fname = 'cape.xxxxyxxx.xxx.nc'
@@ -89,6 +89,8 @@ contains
     call ncinfo(ncname( 2,:),'rwp','xy crosssections rain water path','kg/m^2','tt0t')
     call ncinfo(ncname( 3,:),'twp','total water path','kg/m^2','tt0t')
     call ncinfo(ncname( 4,:),'surfprec','surface precipitation','-','tt0t')
+    call ncinfo(ncname( 5,:),'mfcadv','vertical integral of horizontal qt advection','kg/kg*m/s','tt0t')
+    call ncinfo(ncname( 6,:),'mfccon','vertical integral of horizontal qt convergence','kg/kg*m/s','tt0t')
     call open_nc(fname,  ncid4,nrec,n1=imax,n2=jmax)
     if (nrec==0) then
       call define_nc( ncid4, 1, tncname)
@@ -102,18 +104,22 @@ contains
 !>Run crosssection.
   subroutine docape
     use modglobal, only : imax,jmax,i1,j1,k1,nsv,rk3step,timee,rtimee,dt_lim,&
-    nsv,dzf
-    use modfields, only : qt0,ql0,sv0,rhobf
+    nsv,dzf,dxi5,dyi5
+    use modfields, only : qt0,ql0,sv0,rhobf,u0,v0
     use modstat_nc, only : lnetcdf, writestat_nc
     use modmicrodata, only : iqr, precep, imicro
     use modmpi
     implicit none
 
     real, allocatable :: lwp(:,:),twp(:,:),rwp(:,:),sprec(:,:)
+    ! for how to calc the following two terms, see Banacos, Peter: moisture flux convergence: its history...
+    real, allocatable :: mfcadv(:,:) ! moisture flux convergence; advection term
+    real, allocatable :: mfccon(:,:) ! moisture flux convergence; convergence term
     real, allocatable :: vars(:,:,:)
 
     ! LOCAL VARIABLES
     integer :: i,j,k
+    real :: dqt0dx,dqt0dy,du0dx,dv0dy
 
     if (.not. lcape) return
     if (rk3step/=3) return
@@ -126,37 +132,37 @@ contains
 
     allocate(lwp(2:i1,2:j1),rwp(2:i1,2:j1),twp(2:i1,2:j1))
     allocate(sprec(2:i1,2:j1))
+    allocate(mfcadv(2:i1,2:j1),mfccon(2:i1,2:j1))
 
     ! loops over i,j,k
     lwp=0.
     twp=0.
     rwp=0.
     sprec=0.
+    mfcadv=0.
+    mfccon=0.
     do k=1,k1
     do j=2,j1
     do i=2,i1
+      ! water paths and surface precip
       lwp(i,j)=lwp(i,j)+rhobf(k)*ql0(i,j,k)*dzf(k)
       twp(i,j)=twp(i,j)+rhobf(k)*qt0(i,j,k)*dzf(k)
+      if(nsv>1 .AND. imicro>0)then 
+        rwp(i,j)=rwp(i,j)+rhobf(k)*sv0(i,j,k,iqr)*dzf(k)
+        if(k==1)sprec(i,j)=precep(i,j,k)*rhobf(k)! correct for density to find total rain mass-flux
+      end if
+      ! vertical integral of moisture flux convergence
+      ! finite central difference for "gradients"
+      dqt0dx = ( qt0(i+1,j,k) - qt0(i-1,j,k) ) * dxi5
+      dqt0dy = ( qt0(i,j+1,k) - qt0(i,j-1,k) ) * dyi5
+      du0dx  = ( u0(i+1,j,k) - u0(i-1,j,k) ) * dxi5
+      dv0dy  = ( v0(i,j+1,k) - v0(i,j-1,k) ) * dyi5
+      ! calculate the terms
+      mfcadv(i,j) = mfcadv(i,j) + ( (-1)*u0(i,j,k)*dqt0dx + (-1)*v0(i,j,k)*dqt0dy ) * dzf(k)
+      mfccon(i,j) = mfccon(i,j) + ( (-1)*qt0(i,j,k)*(du0dx+dv0dy) ) * dzf(k)
     enddo
     enddo
     enddo
-
-    if(nsv>1) then
-    if(imicro>0) then
-      do k=1,k1
-      do j=2,j1
-      do i=2,i1
-      rwp(i,j)=rwp(i,j)+rhobf(k)*sv0(i,j,k,iqr)*dzf(k)
-      enddo
-      enddo
-      enddo
-      do j=2,j1
-      do i=2,i1
-      sprec(i,j)=precep(i,j,1)*rhobf(1) ! correct for density to find total rain mass-flux
-      enddo
-      enddo
-    endif
-    endif
 
     if (lnetcdf) then
       allocate(vars(1:imax,1:jmax,nvar))
@@ -164,12 +170,14 @@ contains
       vars(:,:,2) = rwp(2:i1,2:j1)
       vars(:,:,3) = twp(2:i1,2:j1)
       vars(:,:,4)= sprec(2:i1,2:j1)
+      vars(:,:,5)= mfcadv(2:i1,2:j1)
+      vars(:,:,6)= mfccon(2:i1,2:j1)
       call writestat_nc(ncid4,1,tncname,(/rtimee/),nrec,.true.)
       call writestat_nc(ncid4,nvar,ncname(1:nvar,:),vars,nrec,imax,jmax)
       deallocate(vars)
     end if
 
-    deallocate(lwp,twp,rwp,sprec)
+    deallocate(lwp,twp,rwp,sprec,mfcadv,mfccon)
 
   end subroutine docape
 
