@@ -63,6 +63,8 @@ contains
 
 !     ch   = 2. * alpha_kolm / beta_kolm
     ch   = cm
+    !ch = 1.0/Prandtl
+    
     ch2  = ch-ch1
 
     ceps = 2. * pi / cf * (1.5*alpha_kolm)**(-1.5)
