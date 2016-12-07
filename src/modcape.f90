@@ -89,8 +89,8 @@ contains
     call ncinfo(ncname( 2,:),'rwp','xy crosssections rain water path','kg/m^2','tt0t')
     call ncinfo(ncname( 3,:),'twp','total water path','kg/m^2','tt0t')
     call ncinfo(ncname( 4,:),'surfprec','surface precipitation','-','tt0t')
-    call ncinfo(ncname( 5,:),'mfcadv','vertical integral of horizontal qt advection','kg/kg*m/s','tt0t')
-    call ncinfo(ncname( 6,:),'mfccon','vertical integral of horizontal qt convergence','kg/kg*m/s','tt0t')
+    call ncinfo(ncname( 5,:),'mfcadv','vertical integral of horizontal qt advection','kg/m^2','tt0t')
+    call ncinfo(ncname( 6,:),'mfccon','vertical integral of horizontal qt convergence','kg/m^2','tt0t')
     call open_nc(fname,  ncid4,nrec,n1=imax,n2=jmax)
     if (nrec==0) then
       call define_nc( ncid4, 1, tncname)
@@ -158,8 +158,8 @@ contains
       du0dx  = ( u0(i+1,j,k) - u0(i-1,j,k) ) * dxi5
       dv0dy  = ( v0(i,j+1,k) - v0(i,j-1,k) ) * dyi5
       ! calculate the terms
-      mfcadv(i,j) = mfcadv(i,j) + ( (-1)*u0(i,j,k)*dqt0dx + (-1)*v0(i,j,k)*dqt0dy ) * dzf(k)
-      mfccon(i,j) = mfccon(i,j) + ( (-1)*qt0(i,j,k)*(du0dx+dv0dy) ) * dzf(k)
+      mfcadv(i,j) = mfcadv(i,j) + rhobf(k)*( (-1)*u0(i,j,k)*dqt0dx + (-1)*v0(i,j,k)*dqt0dy ) * dzf(k)
+      mfccon(i,j) = mfccon(i,j) + rhobf(k)*( (-1)*qt0(i,j,k)*(du0dx+dv0dy) ) * dzf(k)
     enddo
     enddo
     enddo
