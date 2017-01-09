@@ -54,6 +54,7 @@ module modsamptend
   integer, allocatable :: nrsamptot(:,:),nrsamp(:,:),nrsamplast(:,:),nrsampnew(:,:)
   character(80) :: fname = 'samptend.xxx.nc'
   integer :: ncid,nrec = 0
+  real :: ql0thres = 0.00005
 
 contains
 !> Initialization routine, reads namelists and inits variables
@@ -401,7 +402,7 @@ subroutine initsamptend
           do i=2,i1
           do j=2,j1
           do k=1,kmax
-            if (ql0(i,j,k)>epsilon(1.0)) then
+            if (ql0(i,j,k)>ql0thres) then
                 tendmask(i,j,k,isamp) = .true.
             endif
           enddo
@@ -411,7 +412,7 @@ subroutine initsamptend
           do i=2,i1
           do j=2,j1
           do k=1,kmax
-            if (ql0(i,j,k)>epsilon(1.0).and.thv0(i,j,k) > thvav(k)) then
+            if (ql0(i,j,k)>ql0thres.and.thv0(i,j,k) > thvav(k)) then
                 tendmask(i,j,k,isamp) = .true.
             endif
           enddo
@@ -421,7 +422,7 @@ subroutine initsamptend
           do i=2,i1
           do j=2,j1
           do k=1,kmax
-            if (ql0(i,j,k)>epsilon(1.0).and.w0f(i,j,k).gt.0.) then
+            if (ql0(i,j,k)>ql0thres.and.w0f(i,j,k).gt.0.) then
                 tendmask(i,j,k,isamp) = .true.
             endif
           enddo

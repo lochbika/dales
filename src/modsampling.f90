@@ -57,6 +57,7 @@ save
   integer,allocatable, dimension(:,:) :: nrtsamphav
   character(80) :: fname = 'sampling.xxx.nc'
   integer :: ncid,nrec = 0
+  real :: ql0thres = 0.00005
 
 contains
 !> Initialization routine, reads namelists and inits variables
@@ -453,10 +454,10 @@ contains
       do i=2,i1
       do j=2,j1
       do k=1,kmax
-         if (ql0(i,j,k)>epsilon(1.0)) then
+         if (ql0(i,j,k)>ql0thres) then
              maskf(i,j,k) = .true.
          endif
-         if (ql0h(i,j,k)>epsilon(1.0)) then
+         if (ql0h(i,j,k)>ql0thres) then
              maskh(i,j,k) = .true.
          endif
       enddo
@@ -467,10 +468,10 @@ contains
       do i=2,i1
       do j=2,j1
       do k=1,kmax
-         if (ql0(i,j,k)>epsilon(1.0).and.thv0(i,j,k) > thvav(k)) then
+         if (ql0(i,j,k)>ql0thres.and.thv0(i,j,k) > thvav(k)) then
              maskf(i,j,k) = .true.
          endif
-         if (ql0h(i,j,k)>epsilon(1.0).and.thv0h(i,j,k) > thvhav(k)) then
+         if (ql0h(i,j,k)>ql0thres.and.thv0h(i,j,k) > thvhav(k)) then
              maskh(i,j,k) = .true.
          endif
       enddo
@@ -481,10 +482,10 @@ contains
       do i=2,i1
       do j=2,j1
       do k=1,kmax
-         if (ql0(i,j,k)>epsilon(1.0).and.w0f(i,j,k).gt.0.) then
+         if (ql0(i,j,k)>ql0thres.and.w0f(i,j,k).gt.0.) then
              maskf(i,j,k) = .true.
          endif
-         if (ql0h(i,j,k)>epsilon(1.0).and.w0(i,j,k).gt.0.) then
+         if (ql0h(i,j,k)>ql0thres.and.w0(i,j,k).gt.0.) then
              maskh(i,j,k) = .true.
          endif
       enddo
