@@ -89,8 +89,8 @@ contains
     call ncinfo(ncname( 2,:),'rwp','xy crosssections rain water path','kg/m^2','tt0t')
     call ncinfo(ncname( 3,:),'twp','total water path','kg/m^2','tt0t')
     call ncinfo(ncname( 4,:),'surfprec','surface precipitation','-','tt0t')
-    call ncinfo(ncname( 5,:),'mfcadv','vertical integral of horizontal qt advection','kg/m^2','tt0t')
-    call ncinfo(ncname( 6,:),'mfccon','vertical integral of horizontal qt convergence','kg/m^2','tt0t')
+    call ncinfo(ncname( 5,:),'mfcadv','vertical integral of horizontal qv advection','kg/m^2','tt0t')
+    call ncinfo(ncname( 6,:),'mfccon','vertical integral of horizontal qv convergence','kg/m^2','tt0t')
     call open_nc(fname,  ncid4,nrec,n1=imax,n2=jmax)
     if (nrec==0) then
       call define_nc( ncid4, 1, tncname)
@@ -103,7 +103,7 @@ contains
 
 !>Run crosssection.
   subroutine docape
-    use modglobal, only : imax,jmax,i1,j1,k1,nsv,rk3step,timee,rtimee,dt_lim,&
+    use modglobal, only : imax,jmax,ih,jh,i1,j1,k1,nsv,rk3step,timee,rtimee,dt_lim,&
     nsv,dzf,dxi5,dyi5
     use modfields, only : qt0,ql0,sv0,rhobf,u0,v0
     use modstat_nc, only : lnetcdf, writestat_nc
@@ -116,10 +116,11 @@ contains
     real, allocatable :: mfcadv(:,:) ! moisture flux convergence; advection term
     real, allocatable :: mfccon(:,:) ! moisture flux convergence; convergence term
     real, allocatable :: vars(:,:,:)
+    real, allocatable :: qv0(:,:,:)
 
     ! LOCAL VARIABLES
     integer :: i,j,k
-    real :: dqt0dx,dqt0dy,du0dx,dv0dy
+    real :: dqv0dx,dqv0dy,du0dx,dv0dy
 
     if (.not. lcape) return
     if (rk3step/=3) return
@@ -132,7 +133,18 @@ contains
 
     allocate(lwp(2:i1,2:j1),rwp(2:i1,2:j1),twp(2:i1,2:j1))
     allocate(sprec(2:i1,2:j1))
+    allocate(qv0(2-ih:i1+ih,2-jh:j1+jh,k1))
     allocate(mfcadv(2:i1,2:j1),mfccon(2:i1,2:j1))
+
+    ! calculate qv=qt-ql
+    qv0=0.D0
+    do k=1,k1
+    do j=2,j1
+    do i=2,i1
+      qv0(i,j,k)=qt0(i,j,k)-ql0(i,j,k)
+    enddo
+    enddo
+    enddo
 
     ! loops over i,j,k
     lwp=0.
@@ -153,13 +165,13 @@ contains
       end if
       ! vertical integral of moisture flux convergence
       ! finite central difference for "gradients"
-      dqt0dx = ( qt0(i+1,j,k) - qt0(i-1,j,k) ) * dxi5
-      dqt0dy = ( qt0(i,j+1,k) - qt0(i,j-1,k) ) * dyi5
+      dqv0dx = ( qv0(i+1,j,k) - qv0(i-1,j,k) ) * dxi5
+      dqv0dy = ( qv0(i,j+1,k) - qv0(i,j-1,k) ) * dyi5
       du0dx  = ( u0(i+1,j,k) - u0(i-1,j,k) ) * dxi5
       dv0dy  = ( v0(i,j+1,k) - v0(i,j-1,k) ) * dyi5
       ! calculate the terms
-      mfcadv(i,j) = mfcadv(i,j) + rhobf(k)*( (-1)*u0(i,j,k)*dqt0dx + (-1)*v0(i,j,k)*dqt0dy ) * dzf(k)
-      mfccon(i,j) = mfccon(i,j) + rhobf(k)*( (-1)*qt0(i,j,k)*(du0dx+dv0dy) ) * dzf(k)
+      mfcadv(i,j) = mfcadv(i,j) + rhobf(k)*( (-1)*u0(i,j,k)*dqv0dx + (-1)*v0(i,j,k)*dqv0dy ) * dzf(k)
+      mfccon(i,j) = mfccon(i,j) + rhobf(k)*( (-1)*qv0(i,j,k)*(du0dx+dv0dy) ) * dzf(k)
     enddo
     enddo
     enddo
@@ -177,7 +189,7 @@ contains
       deallocate(vars)
     end if
 
-    deallocate(lwp,twp,rwp,sprec,mfcadv,mfccon)
+    deallocate(lwp,twp,rwp,sprec,mfcadv,mfccon,qv0)
 
   end subroutine docape
 
