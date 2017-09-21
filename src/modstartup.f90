@@ -464,8 +464,9 @@ contains
 
       krand  = min(krand,kmax)
       do k = 1,krand
-        call randomnize(qtm ,k,randqt ,irandom,ih,jh)
-        call randomnize(qt0 ,k,randqt ,irandom,ih,jh)
+        !call randomnize(qtm ,k,randqt ,irandom,ih,jh)
+        call weightfield(qtm ,k,ih,jh)
+        call weightfield(qt0 ,k,ih,jh)
         call randomnize(thlm,k,randthl,irandom,ih,jh)
         call randomnize(thl0,k,randthl,irandom,ih,jh)
       end do
@@ -1031,6 +1032,44 @@ contains
 
     return
   end subroutine randomnize
+  
+  subroutine weightfield(field,klev,ihl,jhl)
+    ! this subroutine reads the file 'weight.fields.txt' and multiplies the given field
+    ! with the weights found in this file
+
+    use modmpi,    only : myidx, myidy,myid
+    use modglobal, only : itot,jtot,imax,jmax,i1,j1,k1
+    integer :: ihl, jhl
+    integer :: i,j,klev
+    integer :: is,ie,js,je
+    real :: field(2-ihl:i1+ihl,2-jhl:j1+jhl,k1)
+    real :: wfield(itot,jtot)
+    
+    is = myidx * imax + 1
+    ie = is + imax - 1
+
+    js = myidy * jmax + 1
+    je = js + jmax - 1
+    
+    ! read the file with weights
+    open(unit=555,file='weight.fields.txt',status='old',action='read')
+    do j=1,jtot
+      read(555,*)wfield(:,j)
+    enddo
+    close(unit=555)
+
+    ! multiply the given field with factors
+    do j=1,jtot
+    do i=1,itot
+      if (i >= is .and. i <= ie .and. &
+          j >= js .and. j <= je) then
+        field(i-is+2,j-js+2,klev) = field(i-is+2,j-js+2,klev) * wfield(i,j)
+      endif
+    enddo
+    enddo
+
+    return
+  end subroutine weightfield
 
   subroutine baseprofs
     ! Calculates the profiles corresponding to the base state
